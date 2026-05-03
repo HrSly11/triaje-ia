@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import DashboardOperativo from './components/DashboardOperativo';
 import DashboardGestion from './components/DashboardGestion';
+import PDFDownload from './components/PDFDownload';
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('operacional');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+
+  const formatDateForFilename = (dateStr) => {
+    return dateStr.replace(/-/g, '');
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -26,9 +31,26 @@ const App = () => {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-slate-800">Panel de Control</h2>
-          <p className="text-slate-500">Estadísticas y métricas del sistema de triaje</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800">Panel de Control</h2>
+            <p className="text-slate-500">Estadísticas y métricas del sistema de triaje</p>
+          </div>
+          <div className="flex gap-2">
+            {activeTab === 'operacional' ? (
+              <PDFDownload 
+                targetId="dashboard-operacional" 
+                filename={`reporte-operacional-${formatDateForFilename(selectedDate)}`}
+                label="Descargar Reporte PDF"
+              />
+            ) : (
+              <PDFDownload 
+                targetId="dashboard-gestion" 
+                filename={`reporte-gestion-${formatDateForFilename(selectedMonth)}`}
+                label="Descargar Reporte PDF"
+              />
+            )}
+          </div>
         </div>
 
         <div className="flex space-x-1 bg-slate-100 p-1 rounded-lg mb-6 w-fit">
@@ -75,11 +97,13 @@ const App = () => {
           </span>
         </div>
 
-        {activeTab === 'operacional' ? (
-          <DashboardOperativo selectedDate={selectedDate} />
-        ) : (
-          <DashboardGestion selectedMonth={selectedMonth} />
-        )}
+        <div id={activeTab === 'operacional' ? 'dashboard-operacional' : 'dashboard-gestion'}>
+          {activeTab === 'operacional' ? (
+            <DashboardOperativo selectedDate={selectedDate} />
+          ) : (
+            <DashboardGestion selectedMonth={selectedMonth} />
+          )}
+        </div>
       </main>
 
       <footer className="bg-white border-t border-slate-200 mt-8 py-6">
