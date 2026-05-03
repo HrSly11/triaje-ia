@@ -18,7 +18,7 @@ services:
       - key: POSTGRES_HOST
         fromService:
           name: triaje-postgres
-          type: internal
+          property: host
       - key: POSTGRES_PORT
         value: "5432"
       - key: POSTGRES_DB
@@ -30,7 +30,7 @@ services:
       - key: HCE_API_URL
         fromService:
           name: triaje-mock-hce
-          type: internal
+          property: url
 
   - type: web
     name: triaje-streamlit
@@ -42,7 +42,7 @@ services:
       - key: API_URL
         fromService:
           name: triaje-api
-          type: internal
+          property: url
 
   - type: web
     name: triaje-mock-hce
