@@ -63,22 +63,32 @@ graph TB
     style OA fill:#808080,color:#fff
 ```
 
-### Flujo de Ejecución con Docker
+### Flujo de Ejecución
 
 ```mermaid
 graph LR
-    A["> docker-compose up -d"] --> B["Todos los servicios\ninician automáticamente"]
-    B --> C["PostgreSQL primero"]
-    B --> D["Mock HCE después"]
-    B --> E["API Flask luego"]
-    B --> F["Streamlit y React\nal final"]
+    subgraph Docker["🐳 Docker (docker-compose)"]
+        A1["docker-compose up -d"] --> B1["PostgreSQL"]
+        A1 --> B2["Mock HCE"]
+        A1 --> B3["API Flask"]
+        A1 --> B4["Streamlit"]
+        A1 --> B5["n8n"]
+    end
     
-    style A fill:#2496ed,color:#fff
-    style B fill:#16213e,color:#fff
-    style C fill:#336791,color:#fff
-    style D fill:#4caf50,color:#fff
-    style E fill:#000,color:#fff
-    style F fill:#ff4b4b,color:#fff
+    subgraph Manual["⚡ Ejecución Manual"]
+        A2["npm run dev"] --> C["React Dashboard :3000"]
+    end
+    
+    C -->|"HTTP REST"| B3
+    
+    style A1 fill:#2496ed,color:#fff
+    style B1 fill:#336791,color:#fff
+    style B2 fill:#4caf50,color:#fff
+    style B3 fill:#000,color:#fff
+    style B4 fill:#ff4b4b,color:#fff
+    style B5 fill:#ea4a5a,color:#fff
+    style A2 fill:#61dafb,color:#000
+    style C fill:#61dafb,color:#000
 ```
 
 ### Servicios Docker (docker-compose.yml)
@@ -100,20 +110,20 @@ graph LR
 git clone https://github.com/HrSly11/triaje-ia.git
 cd triaje-ia
 
-# 2. Iniciar todos los servicios con Docker
+# 2. Iniciar servicios Docker (Backend)
 docker-compose up -d
 
-# 3. Verificar estado
-docker-compose ps
-
-# 4. Ver logs de un servicio específico
-docker-compose logs -f api
-
-# 5. Detener todos los servicios
-docker-compose down
+# 3. Iniciar React Dashboard (Manual)
+cd frontend/react
+npm install
+npm run dev
 ```
 
-**Nota:** Ya no se ejecuta `python app.py` o `npm run dev` directamente. Todo funciona dentro de contenedores Docker.
+### Detener Servicios Docker
+
+```bash
+docker-compose down
+```
 
 ### Flujo de Datos
 
