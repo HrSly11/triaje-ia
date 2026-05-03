@@ -1,40 +1,11 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "buildCommand": "docker-compose build"
+    "builder": "DOCKERFILE",
+    "dockerfile": "api/Dockerfile"
   },
   "deploy": {
     "numReplicas": 1,
-    "restartPolicyType": "OnFailure",
     "restartPolicyMaxRetries": 10
-  },
-  "services": {
-    "postgres": {
-      "build": {
-        "dockerfile": "Dockerfile",
-        "context": "."
-      },
-      "deploy": {
-        "command": "postgres -c timezone=America/Bogota"
-      }
-    },
-    "api": {
-      "build": {
-        "dockerfile": "Dockerfile",
-        "context": "./api"
-      }
-    },
-    "streamlit": {
-      "build": {
-        "dockerfile": "Dockerfile",
-        "context": "./frontend/streamlit"
-      }
-    },
-    "mock_hce": {
-      "build": {
-        "dockerfile": "Dockerfile",
-        "context": "./backend/mock-hce"
-      }
-    }
   }
 }
