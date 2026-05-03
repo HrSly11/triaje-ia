@@ -72,7 +72,7 @@ const DashboardOperativo = ({ selectedDate }) => {
         />
         <MetricCard
           title="Tiempo Promedio"
-          value={typeof metricas.tiempo_promedio_minutos === 'number' ? `${metricas.tiempo_promedio_minutos.toFixed(1)} min` : 'N/A'}
+          value={metricas.tiempo_promedio_minutos != null ? `${parseFloat(metricas.tiempo_promedio_minutos).toFixed(1)} min` : 'N/A'}
           subtitle="Duración promedio de atención"
           icon={Clock}
         />
