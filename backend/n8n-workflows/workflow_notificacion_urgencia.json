@@ -1,5 +1,4 @@
 {
-  "name": "TRIAGE-01 Notificacion Urgencia",
   "nodes": [
     {
       "parameters": {
@@ -11,13 +10,13 @@
           ]
         }
       },
-      "id": "dd07d6f8-694c-47ba-b940-670775ac90fc",
+      "id": "ffde8f7c-3ee1-401d-be60-8ac88a4c9a56",
       "name": "Scheduled Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -1216,
-        80
+        -1360,
+        -160
       ]
     },
     {
@@ -26,17 +25,17 @@
         "query": "SELECT t.id_triaje, t.nivel_urgencia, t.fecha_hora, p.nombre_completo as paciente, p.telefono\nFROM triajes t\nJOIN pacientes p ON t.id_paciente = p.id_paciente\nWHERE t.nivel_urgencia IN ('alto', 'critico')\nAND DATE(t.fecha_hora) = CURRENT_DATE\nAND t.id_triaje NOT IN (SELECT id_registro_afectado FROM logs_auditoria WHERE accion = 'NOTIFICACION_ENVIADA')\nORDER BY t.fecha_hora DESC",
         "options": {}
       },
-      "id": "d0b2ac2f-de31-47fa-a672-069e51a5d063",
+      "id": "11ed352e-663f-4a91-8814-cc1e4d366090",
       "name": "Buscar Triajes Urgentes",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -1008,
-        80
+        -1152,
+        -160
       ],
       "credentials": {
         "postgres": {
-          "id": "nru9cf7voC3B5alh",
+          "id": "eWnq0f9S2J237ugv",
           "name": "Postgres account"
         }
       }
@@ -59,31 +58,32 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "loose"
+            "typeValidation": "loose",
+            "version": 1
           }
         },
         "options": {}
       },
-      "id": "de98adc2-82d6-4afa-96ba-fdbc49ae2832",
+      "id": "1c3c77be-582f-447e-906e-9daab103b992",
       "name": "Hay Triajes Urgentes?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -816,
-        80
+        -960,
+        -160
       ]
     },
     {
       "parameters": {
-        "jsCode": "\nconst items = $input.all();\nconst resultados = [];\n\nfor (const item of items) {\n  const triaje = item.json;\n  const nivelEmoji = triaje.nivel_urgencia === 'critico' ? '🚨' : '⚠️';\n  const nivelColor = triaje.nivel_urgencia === 'critico' ? 'ROJO' : 'NARANJA';\n  \n  resultados.push({\n    json: {\n      asunto: `${nivelEmoji} ALERTA: Triaje ${nivelColor} - ${triaje.paciente}`,\n      cuerpo: `Se ha registrado un triaje de nivel ${triaje.nivel_urgencia} para el paciente ${triaje.paciente}.\\n\\nFecha: ${new Date(triaje.fecha_hora).toLocaleString()}\\nID Triaje: ${triaje.id_triaje}`,\n      destino: 'equipo-medico@triage-ia.local'\n    }\n  });\n}\n\nreturn resultados;"
+        "jsCode": "const items = $input.all();\nconst resultados = [];\n\nfor (const item of items) {\n  const triaje = item.json;\n  const nivelEmoji = triaje.nivel_urgencia === 'critico' ? '🚨' : '⚠️';\n  const nivelColor = triaje.nivel_urgencia === 'critico' ? 'ROJO' : 'NARANJA';\n  \n  resultados.push({\n    json: {\n      asunto: `${nivelEmoji} ALERTA: Triaje ${nivelColor} - ${triaje.paciente}`,\n      cuerpo: `Se ha registrado un triaje de nivel ${triaje.nivel_urgencia} para el paciente ${triaje.paciente}.\\n\\nFecha: ${new Date(triaje.fecha_hora).toLocaleString()}\\nID Triaje: ${triaje.id_triaje}`,\n      id_triaje: triaje.id_triaje\n    }\n  });\n}\n\nreturn resultados;"
       },
-      "id": "c88f9657-46c4-4c01-aaaa-ee694ddded94",
+      "id": "ab270cef-dd88-4907-b82e-95675c29560f",
       "name": "Preparar Mensaje",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -608,
-        -32
+        -752,
+        -272
       ]
     },
     {
@@ -101,7 +101,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "id_usuario": "00000000-0000-0000-0000-000000000001",
+            "id_usuario": "d4c78837-041b-4a81-b20d-a19eeed9b87b",
             "accion": "NOTIFICACION_ENVIADA",
             "tabla_afectada": "triajes",
             "id_registro_afectado": "={{ $json.id_triaje }}",
@@ -165,17 +165,17 @@
         },
         "options": {}
       },
-      "id": "1999f5ec-3a6b-45ed-b2b4-2fcac693c00a",
+      "id": "ce0a605f-68fb-46f3-9ee9-70d95f2dc312",
       "name": "Log Notificacion",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -416,
-        -32
+        -560,
+        -272
       ],
       "credentials": {
         "postgres": {
-          "id": "nru9cf7voC3B5alh",
+          "id": "eWnq0f9S2J237ugv",
           "name": "Postgres account"
         }
       }
@@ -184,22 +184,22 @@
       "parameters": {
         "fromEmail": "hrodriguezsandoval.10@gmail.com",
         "toEmail": "hsrodriguezsa@unitru.edu.pe",
-        "subject": "={{ $json.asunto || $('Preparar Mensaje').item.json.asunto }}",
-        "html": "={{ $json.cuerpo || $('Preparar Mensaje').item.json.cuerpo }}",
+        "subject": "={{ $('Preparar Mensaje').item.json.asunto }}",
+        "html": "={{ $('Preparar Mensaje').item.json.cuerpo }}",
         "options": {}
       },
-      "id": "f49927f9-a7d2-40a7-bb36-e9c4b4411287",
+      "id": "75c17dd9-c76e-4f01-a42e-0fc01c4f67b0",
       "name": "Enviar Email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        -208,
-        -32
+        -352,
+        -272
       ],
-      "webhookId": "7bf45a52-20e1-4729-9510-1f68f77640da",
+      "webhookId": "2f471569-ea7a-46fd-bd71-1fc7087c25aa",
       "credentials": {
         "smtp": {
-          "id": "KkkluET1myiWfROt",
+          "id": "jZFkP5uq5LuzZnxb",
           "name": "SMTP account"
         }
       }
@@ -207,21 +207,21 @@
     {
       "parameters": {
         "chatId": "8740415165",
-        "text": "={{ ($json.asunto || $('Preparar Mensaje').item.json.asunto) + \"\\n\\n\" + ($json.cuerpo || $('Preparar Mensaje').item.json.cuerpo) }}",
+        "text": "={{ $('Preparar Mensaje').item.json.asunto + '\\n\\n' + $('Preparar Mensaje').item.json.cuerpo }}",
         "additionalFields": {}
       },
-      "id": "3208b22e-1634-4489-8838-37f929bfd4da",
+      "id": "65507075-7db5-4709-aab0-69f0e2e45efc",
       "name": "Enviar Telegram",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -208,
-        176
+        -352,
+        -64
       ],
-      "webhookId": "8abfeddc-0465-49d0-83f1-9ca1446ac853",
+      "webhookId": "25b75f59-56bf-49fa-8f75-c32e4802582e",
       "credentials": {
         "telegramApi": {
-          "id": "m6sTAcLzbR5pATpm",
+          "id": "pbdLM1ilJ9Wy3vNp",
           "name": "Telegram account"
         }
       }
@@ -232,17 +232,17 @@
         "query": "SELECT 1 as noop",
         "options": {}
       },
-      "id": "d379e671-9833-41b7-a3c2-a08e03010574",
+      "id": "95ef4b2b-0b1d-4b4d-8920-da9da4c62565",
       "name": "No Operation",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -608,
-        272
+        -752,
+        32
       ],
       "credentials": {
         "postgres": {
-          "id": "nru9cf7voC3B5alh",
+          "id": "eWnq0f9S2J237ugv",
           "name": "Postgres account"
         }
       }
@@ -289,6 +289,17 @@
         ]
       ]
     },
+    "Preparar Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Log Notificacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Log Notificacion": {
       "main": [
         [
@@ -304,22 +315,11 @@
           }
         ]
       ]
-    },
-    "Preparar Mensaje": {
-      "main": [
-        [
-          {
-            "node": "Log Notificacion",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
   "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "c833c568d2a627d2e79d109052c0697bb56cb3cef7e1915a1bedbf083c518581"
+    "instanceId": "ec26e1b86c0aa884f76d0824e71d7fe04045c25c5d8146eaf903d95ab59533d1"
   }
 }

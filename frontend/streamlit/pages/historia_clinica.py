@@ -1,13 +1,14 @@
 import streamlit as st
 import requests
 import json
+import os
 from datetime import datetime
 import pandas as pd
 
 st.set_page_config(page_title="Historia Clínica", page_icon="📋", layout="wide")
 
-API_URL = "http://localhost:5000"
-HCE_URL = "http://localhost:8001"
+API_URL = os.getenv("API_URL", "http://localhost:5000")
+HCE_URL = os.getenv("HCE_URL", "http://localhost:8001")
 
 def get_paciente_hce(numero_documento):
     try:

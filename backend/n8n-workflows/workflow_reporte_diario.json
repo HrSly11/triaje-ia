@@ -1,133 +1,175 @@
 {
-   "name": "TRIAGE-02 Reporte Diario",
-   "nodes": [
-     {
-       "parameters": {
-         "rule": {
-           "interval": [
-             {
-               "triggerAtHour": 20,
-               "triggerAtMinute": 0
-             }
-           ]
-         }
-       },
-       "id": "b334cd71-0d27-403d-9647-263348043c89",
-       "name": "Scheduled Trigger",
-       "type": "n8n-nodes-base.scheduleTrigger",
-       "typeVersion": 1.2,
-       "position": [
-         -240,
-         240
-       ]
-     },
-     {
-       "parameters": {
-         "operation": "executeQuery",
-         "query": "SELECT \n  COUNT(*) as total_triajes,\n  COUNT(CASE WHEN nivel_urgencia = 'critico' THEN 1 END) as criticos,\n  COUNT(CASE WHEN nivel_urgencia = 'alto' THEN 1 END) as altos,\n  COUNT(CASE WHEN nivel_urgencia = 'moderado' THEN 1 END) as moderados,\n  COUNT(CASE WHEN nivel_urgencia = 'bajo' THEN 1 END) as bajos,\n  AVG(EXTRACT(EPOCH FROM (fecha_atencion_fin - fecha_atencion_inicio))/60) as tiempo_promedio_minutos\nFROM triajes\nWHERE DATE(fecha_hora) = CURRENT_DATE",
-         "options": {}
-       },
-       "id": "c522c641-a30a-4337-b1a4-4b88379ab8bf",
-       "name": "Obtener Metricas del Dia",
-       "type": "n8n-nodes-base.postgres",
-       "typeVersion": 2.5,
-       "position": [
-         -48,
-         240
-       ],
-       "credentials": {
-         "postgres": {
-           "id": "nru9cf7voC3B5alh",
-           "name": "Postgres account"
-         }
-       }
-     },
-     {
-       "parameters": {
-         "operation": "executeQuery",
-         "query": "SELECT \n  u.nombre_completo as profesional,\n  COUNT(*) as cantidad_triajes\nFROM triajes t\nJOIN usuarios u ON t.id_usuario = u.id_usuario\nWHERE DATE(t.fecha_hora) = CURRENT_DATE\nGROUP BY u.nombre_completo\nORDER BY cantidad_triajes DESC",
-         "options": {}
-       },
-       "id": "d96fab34-b366-4429-bbdd-142ed6f70a93",
-       "name": "Triajes por Profesional",
-       "type": "n8n-nodes-base.postgres",
-       "typeVersion": 2.5,
-       "position": [
-         -48,
-         448
-       ],
-       "credentials": {
-         "postgres": {
-           "id": "nru9cf7voC3B5alh",
-           "name": "Postgres account"
-         }
-       }
-     },
-     {
-       "parameters": {
-         "operation": "executeQuery",
-         "query": "SELECT \n  DATE_TRUNC('hour', fecha_hora) as hora,\n  COUNT(*) as cantidad\nFROM triajes\nWHERE DATE(fecha_hora) = CURRENT_DATE\nGROUP BY DATE_TRUNC('hour', fecha_hora)\nORDER BY hora",
-         "options": {}
-       },
-       "id": "cc2cd41b-9895-40be-a47e-e9326c4ce40e",
-       "name": "Triajes por Hora",
-       "type": "n8n-nodes-base.postgres",
-       "typeVersion": 2.5,
-       "position": [
-         -48,
-         640
-       ],
-       "credentials": {
-         "postgres": {
-           "id": "nru9cf7voC3B5alh",
-           "name": "Postgres account"
-         }
-       }
-     },
-     {
-       "parameters": {
-         "jsCode": "const allItems = $input.all();\n\nconst metricas = allItems.find(i => i.json.total_triajes !== undefined)?.json || { total_triajes: 0, criticos: 0, altos: 0, moderados: 0, bajos: 0 };\nconst porProfesional = allItems.filter(i => i.json.profesional !== undefined);\nconst porHora = allItems.filter(i => i.json.hora !== undefined);\n\nconst fecha = new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });\n\nconst html = `<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; margin: 40px; }\n    h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }\n    h2 { color: #34495e; margin-top: 30px; }\n    table { width: 100%; border-collapse: collapse; margin: 20px 0; }\n    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }\n    th { background-color: #3498db; color: white; }\n    tr:nth-child(even) { background-color: #f9f9f9; }\n    .metric-box { display: inline-block; width: 150px; padding: 20px; margin: 10px; background: #ecf0f1; border-radius: 8px; text-align: center; }\n    .metric-value { font-size: 2em; font-weight: bold; color: #2c3e50; }\n    .metric-label { font-size: 0.9em; color: #7f8c8d; }\n    .critico { color: #e74c3c; }\n    .alto { color: #e67e22; }\n    .moderado { color: #f39c12; }\n    .bajo { color: #27ae60; }\n  </style>\n</head>\n<body>\n  <h1>Reporte Diario de Triajes</h1>\n  <p><strong>Fecha:</strong> ${fecha}</p>\n  <h2>Resumen General</h2>\n  <div class=\"metric-box\"><div class=\"metric-value\">${metricas.total_triajes || 0}</div><div class=\"metric-label\">Total Triajes</div></div>\n  <div class=\"metric-box\"><div class=\"metric-value critico\">${metricas.criticos || 0}</div><div class=\"metric-label\">Criticos</div></div>\n  <div class=\"metric-box\"><div class=\"metric-value alto\">${metricas.altos || 0}</div><div class=\"metric-label\">Altos</div></div>\n  <div class=\"metric-box\"><div class=\"metric-value moderado\">${metricas.moderados || 0}</div><div class=\"metric-label\">Moderados</div></div>\n  <div class=\"metric-box\"><div class=\"metric-value bajo\">${metricas.bajos || 0}</div><div class=\"metric-label\">Bajos</div></div>\n  <h2>Triajes por Profesional</h2>\n  <table><tr><th>Profesional</th><th>Cantidad</th></tr>\n  ${porProfesional.length > 0 ? porProfesional.map(p => `<tr><td>${p.json.profesional || 'N/A'}</td><td>${p.json.cantidad_triajes || 0}</td></tr>`).join('') : '<tr><td colspan=\"2\">No hay datos</td></tr>'}\n  </table>\n  <h2>Distribucion por Hora</h2>\n  <table><tr><th>Hora</th><th>Cantidad</th></tr>\n  ${porHora.length > 0 ? porHora.map(h => `<tr><td>${new Date(h.json.hora).toLocaleTimeString('es-CO')}</td><td>${h.json.cantidad || 0}</td></tr>`).join('') : '<tr><td colspan=\"2\">No hay datos</td></tr>'}\n  </table>\n  <p><em>Generado automaticamente por el Sistema de Triaje IA.</em></p>\n</body>\n</html>`;\n\nreturn [{ json: { html } }];"
-       },
-       "id": "744b819d-4d2c-4e3a-a48e-d18ab4df446e",
-       "name": "Generar Reporte HTML",
-       "type": "n8n-nodes-base.code",
-       "typeVersion": 2,
-       "position": [
-         160,
-         448
-       ]
-     },
-     {
-       "parameters": {
-         "fromEmail": "hrodriguezsandoval.10@gmail.com",
-         "toEmail": "hsrodriguezsa@unitru.edu.pe",
-         "subject": "Reporte Diario de Triajes",
-         "emailFormat": "html",
-         "html": "={{ $json.html }}",
-         "options": {}
-       },
-       "id": "100ec3dc-e199-4db7-8cb9-592183e294c9",
-       "name": "Enviar Reporte por Email",
-       "type": "n8n-nodes-base.emailSend",
-       "typeVersion": 2.1,
-       "position": [
-         368,
-         448
-       ],
-       "credentials": {
-         "smtp": {
-           "id": "KkkluET1myiWfROt",
-           "name": "SMTP account"
-         }
-       }
-     }
-   ],
-   "connections": {
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 20
+            }
+          ]
+        }
+      },
+      "id": "f6c58bce-1c34-4e22-a6e2-48b0c84b9058",
+      "name": "Scheduled Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        128,
+        1392
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COUNT(*) as total_triajes, COUNT(CASE WHEN nivel_urgencia = 'critico' THEN 1 END) as criticos, COUNT(CASE WHEN nivel_urgencia = 'alto' THEN 1 END) as altos, COUNT(CASE WHEN nivel_urgencia = 'moderado' THEN 1 END) as moderados, COUNT(CASE WHEN nivel_urgencia = 'bajo' THEN 1 END) as bajos FROM triajes WHERE DATE(fecha_hora) = CURRENT_DATE",
+        "options": {}
+      },
+      "id": "1af1f364-0d7c-4777-8d5c-dcaba35a67db",
+      "name": "Obtener Metricas del Dia",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        368,
+        1184
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "eWnq0f9S2J237ugv",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT u.nombre_completo as profesional, COUNT(*) as cantidad_triajes FROM triajes t JOIN usuarios u ON t.id_usuario = u.id_usuario WHERE DATE(t.fecha_hora) = CURRENT_DATE GROUP BY u.nombre_completo ORDER BY cantidad_triajes DESC",
+        "options": {}
+      },
+      "id": "8da65c97-3516-4a62-a659-ca1679dd1682",
+      "name": "Triajes por Profesional",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        368,
+        1392
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "eWnq0f9S2J237ugv",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT DATE_TRUNC('hour', fecha_hora) as hora, COUNT(*) as cantidad FROM triajes WHERE DATE(fecha_hora) = CURRENT_DATE GROUP BY DATE_TRUNC('hour', fecha_hora) ORDER BY hora",
+        "options": {}
+      },
+      "id": "62b18cd4-e1bc-4e89-9caf-8d0630e933dc",
+      "name": "Triajes por Hora",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        368,
+        1584
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "eWnq0f9S2J237ugv",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {
+          "includeUnpaired": true
+        }
+      },
+      "id": "8c27a1e6-1a14-47ae-88be-032274da8581",
+      "name": "Merge Metricas y Profesional",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        608,
+        1296
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {
+          "includeUnpaired": true
+        }
+      },
+      "id": "b1e6c5fc-be58-4795-8bd5-755b988c33c7",
+      "name": "Merge con Horas",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        848,
+        1392
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\n\nconst metricas = allItems.find(i => i.json.total_triajes !== undefined)?.json\n  || { total_triajes: 0, criticos: 0, altos: 0, moderados: 0, bajos: 0 };\n\nconst porProfesional = allItems.filter(i => i.json.profesional !== undefined);\nconst porHora = allItems.filter(i => i.json.hora !== undefined);\n\nconst fecha = new Date().toLocaleDateString('es-CO', {\n  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'\n});\n\nlet html = '<!DOCTYPE html><html><head><style>';\nhtml += 'body{font-family:Arial,sans-serif;margin:40px}';\nhtml += 'h1{color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:10px}';\nhtml += 'h2{color:#34495e;margin-top:30px}';\nhtml += 'table{width:100%;border-collapse:collapse;margin:20px 0}';\nhtml += 'th,td{border:1px solid #ddd;padding:12px;text-align:left}';\nhtml += 'th{background-color:#3498db;color:white}';\nhtml += 'tr:nth-child(even){background-color:#f9f9f9}';\nhtml += '.metric-box{display:inline-block;width:150px;padding:20px;margin:10px;background:#ecf0f1;border-radius:8px;text-align:center}';\nhtml += '.metric-value{font-size:2em;font-weight:bold;color:#2c3e50}';\nhtml += '.metric-label{font-size:0.9em;color:#7f8c8d}';\nhtml += '.critico{color:#e74c3c}.alto{color:#e67e22}.moderado{color:#f39c12}.bajo{color:#27ae60}';\nhtml += '</style></head><body>';\n\nhtml += '<h1>Reporte Diario de Triajes</h1>';\nhtml += '<p><strong>Fecha:</strong> ' + fecha + '</p>';\nhtml += '<h2>Resumen General</h2>';\nhtml += '<div class=\"metric-box\"><div class=\"metric-value\">' + (metricas.total_triajes || 0) + '</div><div class=\"metric-label\">Total Triajes</div></div>';\nhtml += '<div class=\"metric-box\"><div class=\"metric-value critico\">' + (metricas.criticos || 0) + '</div><div class=\"metric-label\">Criticos</div></div>';\nhtml += '<div class=\"metric-box\"><div class=\"metric-value alto\">' + (metricas.altos || 0) + '</div><div class=\"metric-label\">Altos</div></div>';\nhtml += '<div class=\"metric-box\"><div class=\"metric-value moderado\">' + (metricas.moderados || 0) + '</div><div class=\"metric-label\">Moderados</div></div>';\nhtml += '<div class=\"metric-box\"><div class=\"metric-value bajo\">' + (metricas.bajos || 0) + '</div><div class=\"metric-label\">Bajos</div></div>';\n\nhtml += '<h2>Triajes por Profesional</h2>';\nif (porProfesional.length > 0) {\n  html += '<table><tr><th>Profesional</th><th>Cantidad</th></tr>';\n  porProfesional.forEach(item => {\n    html += '<tr><td>' + (item.json.profesional || 'N/A') + '</td><td>' + (item.json.cantidad_triajes || 0) + '</td></tr>';\n  });\n  html += '</table>';\n} else {\n  html += '<p>No hay datos de profesionales</p>';\n}\n\nhtml += '<h2>Distribucion por Hora</h2>';\nif (porHora.length > 0) {\n  html += '<table><tr><th>Hora</th><th>Cantidad</th></tr>';\n  porHora.forEach(item => {\n    const hora = new Date(item.json.hora).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });\n    html += '<tr><td>' + hora + '</td><td>' + (item.json.cantidad || 0) + '</td></tr>';\n  });\n  html += '</table>';\n} else {\n  html += '<p>No hay datos por hora</p>';\n}\n\nhtml += '<p style=\"margin-top:40px;color:#7f8c8d;font-size:0.8em\">Generado automaticamente por el Sistema de Triaje IA</p>';\nhtml += '</body></html>';\n\nreturn [{ json: { html: html } }];"
+      },
+      "id": "0b0693c0-3d8e-452e-98be-626a86567453",
+      "name": "Generar Reporte HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        1392
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "hrodriguezsandoval.10@gmail.com",
+        "toEmail": "hsrodriguezsa@unitru.edu.pe",
+        "subject": "Reporte Diario de Triajes",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "bafca537-bc27-48ef-ae00-0d2cd5b8f23a",
+      "name": "Enviar Reporte por Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1328,
+        1392
+      ],
+      "webhookId": "df2c4fc0-624d-4644-ae79-4fd8a9e9aec1",
+      "credentials": {
+        "smtp": {
+          "id": "jZFkP5uq5LuzZnxb",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "connections": {
     "Scheduled Trigger": {
       "main": [
         [
           {
             "node": "Obtener Metricas del Dia",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Triajes por Profesional",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Triajes por Hora",
             "type": "main",
             "index": 0
           }
@@ -138,7 +180,7 @@
       "main": [
         [
           {
-            "node": "Triajes por Profesional",
+            "node": "Merge Metricas y Profesional",
             "type": "main",
             "index": 0
           }
@@ -149,14 +191,36 @@
       "main": [
         [
           {
-            "node": "Triajes por Hora",
+            "node": "Merge Metricas y Profesional",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Triajes por Hora": {
+      "main": [
+        [
+          {
+            "node": "Merge con Horas",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Metricas y Profesional": {
+      "main": [
+        [
+          {
+            "node": "Merge con Horas",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Triajes por Hora": {
+    "Merge con Horas": {
       "main": [
         [
           {
@@ -179,20 +243,9 @@
       ]
     }
   },
-   "settings": {
-     "executionOrder": "v1"
-   },
-   "staticData": null,
-   "tags": [
-     "triage",
-     "reporte",
-     "diario"
-   ],
-   "triggerCount": 0,
-   "versionId": "09bd9d21-37bb-48fb-b887-bf3d8812eefe",
-   "pinData": {},
-   "meta": {
-     "templateCredsSetupCompleted": true,
-     "instanceId": "c833c568d2a627d2e79d109052c0697bb56cb3cef7e1915a1bedbf083c518581"
-   }
- }
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ec26e1b86c0aa884f76d0824e71d7fe04045c25c5d8146eaf903d95ab59533d1"
+  }
+}

@@ -24,19 +24,23 @@ with tab1:
     with col_filtros:
         ver_inactivos = st.checkbox("Ver inactivos")
 
-    if st.button("🔍 Buscar", use_container_width=True):
-        resultado = utils.obtener_pacientes(busqueda=termino)
+    if st.button("🔍 Buscar", use_container_width=True) or "resultado_busqueda" not in st.session_state:
+        if termino:
+            resultado = utils.obtener_pacientes(busqueda=termino)
+        else:
+            resultado = utils.obtener_pacientes(busqueda="", page=1, per_page=100)
         st.session_state.resultado_busqueda = resultado
 
     if "resultado_busqueda" in st.session_state and st.session_state.resultado_busqueda.get("pacientes"):
         pacientes = st.session_state.resultado_busqueda["pacientes"]
         total = st.session_state.resultado_busqueda.get("total", 0)
 
-        st.success(f"Se encontraron {total} paciente(s)")
+        st.success(f"Total de pacientes: {total}")
         
         df_pacientes = pd.DataFrame(pacientes)
         df_display = df_pacientes[['numero_documento', 'nombre_completo', 'genero', 'telefono', 'fecha_registro']].copy()
         df_display.columns = ['Documento', 'Nombre', 'Género', 'Teléfono', 'Fecha Registro']
+        df_display['Fecha Registro'] = pd.to_datetime(df_display['Fecha Registro']).dt.strftime('%Y-%m-%d')
         st.dataframe(df_display, use_container_width=True, hide_index=True)
         
         st.markdown("---")

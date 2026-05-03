@@ -10,6 +10,7 @@ import json
 from datetime import datetime, timedelta
 import hashlib
 import bcrypt
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -434,6 +435,31 @@ def completar_triaje(id_triaje):
         
         log_auditoria(id_usuario, 'COMPLETAR_TRIJE', 'triajes', id_triaje, {'nivel_urgencia': data.get('nivel_urgencia')})
         
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT p.numero_documento, t.* FROM triajes t JOIN pacientes p ON t.id_paciente = p.id_paciente WHERE t.id_triaje = %s", (id_triaje,))
+            triaje_completo = cursor.fetchone()
+        
+        if triaje_completo:
+            webhook_data = {
+                'numero_documento': triaje_completo['numero_documento'],
+                'id_triaje': str(triaje_completo['id_triaje']),
+                'nivel_urgencia': triaje_completo['nivel_urgencia'],
+                'fecha_hora': triaje_completo['fecha_hora'].isoformat() if triaje_completo['fecha_hora'] else None,
+                'sintomas_principales': triaje_completo['sintomas_principales'],
+                'presion_arterial_sistolica': triaje_completo.get('presion_arterial_sistolica'),
+                'presion_arterial_diastolica': triaje_completo.get('presion_arterial_diastolica'),
+                'frecuencia_cardiaca': triaje_completo.get('frecuencia_cardiaca'),
+                'temperatura': float(triaje_completo.get('temperatura')) if triaje_completo.get('temperatura') else None,
+                'saturacion_oxigeno': triaje_completo.get('saturacion_oxigeno'),
+                'recomendaciones': data.get('resultado_ia', {}).get('recomendaciones') if data.get('resultado_ia') else None,
+                'posibles_diagnosticos': data.get('resultado_ia', {}).get('posibles_diagnosticos') if data.get('resultado_ia') else None
+            }
+            try:
+                n8n_webhook = os.getenv('N8N_WEBHOOK_TRIAGE', 'http://n8n:5678/webhook/triaje-completado')
+                requests.post(n8n_webhook, json=webhook_data, timeout=10)
+            except Exception as e:
+                print(f"Warning: Could not notify n8n webhook: {e}")
+        
         return jsonify(dict(triaje)), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -556,3 +582,29 @@ if __name__ == '__main__':
     port = int(os.getenv('FLASK_PORT', 5000))
     host = os.getenv('FLASK_HOST', '0.0.0.0')
     app.run(host=host, port=port, debug=True)
+
+@app.route('/api/logs', methods=['GET'])
+def obtener_logs():
+    accion = request.args.get('accion', '')
+    limite = request.args.get('limite', 50, type=int)
+    
+    try:
+        with get_db_cursor() as cursor:
+            if accion:
+                cursor.execute("""
+                    SELECT * FROM logs_auditoria 
+                    WHERE accion = %s
+                    ORDER BY fecha_hora DESC 
+                    LIMIT %s
+                """, (accion, limite))
+            else:
+                cursor.execute("""
+                    SELECT * FROM logs_auditoria 
+                    ORDER BY fecha_hora DESC 
+                    LIMIT %s
+                """, (limite,))
+            logs = cursor.fetchall()
+        
+        return jsonify({'logs': [dict(log) for log in logs]}), 200
+    except Exception as e:
+        return jsonify({'error': str(e), 'logs': []}), 500

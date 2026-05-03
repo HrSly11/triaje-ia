@@ -7,42 +7,52 @@
         "path": "triaje-completado",
         "options": {}
       },
-      "id": "acf6b5f2-a59f-4820-8855-68353fda044b",
+      "id": "0c86287a-703f-4057-bbfc-e7ae47f0a083",
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [1488, 192],
+      "position": [
+        176,
+        -16
+      ],
       "webhookId": "triaje-completado-webhook"
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst triaje = typeof body === 'string' ? JSON.parse(body) : body;\n\nreturn [{json: {\n  numero_documento: triaje.numero_documento,\n  id_triaje: triaje.id_triaje,\n  nivel_urgencia: triaje.nivel_urgencia,\n  fecha_hora: triaje.fecha_hora,\n  sintomas: triaje.sintomas_principales || triaje.sintomas,\n  signos_vitales: {\n    presion_arterial: triaje.presion_arterial_sistolica && triaje.presion_arterial_diastolica \n      ? `${triaje.presion_arterial_sistolica}/${triaje.presion_arterial_diastolica}` \n      : 'N/A',\n    frecuencia_cardiaca: triaje.frecuencia_cardiaca || 'N/A',\n    temperatura: triaje.temperatura || 'N/A',\n    saturacion_oxigeno: triaje.saturacion_oxigeno || 'N/A'\n  },\n  recomendaciones: triaje.recomendaciones || 'N/A',\n  posibles_diagnosticos: triaje.posibles_diagnosticos || 'N/A'\n}}];"
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst triaje = typeof body === 'string' ? JSON.parse(body) : body;\n\nreturn [{json: {\n  numero_documento: triaje.numero_documento,\n  id_triaje: triaje.id_triaje,\n  nivel_urgencia: triaje.nivel_urgencia,\n  fecha_hora: triaje.fecha_hora,\n  sintomas: triaje.sintomas_principales || triaje.sintomas,\n  signos_vitales: {\n    presion_arterial: triaje.presion_arterial_sistolica && triaje.presion_arterial_diastolica\n      ? `${triaje.presion_arterial_sistolica}/${triaje.presion_arterial_diastolica}`\n      : 'N/A',\n    frecuencia_cardiaca: triaje.frecuencia_cardiaca || 'N/A',\n    temperatura: triaje.temperatura || 'N/A',\n    saturacion_oxigeno: triaje.saturacion_oxigeno || 'N/A'\n  },\n  recomendaciones: triaje.recomendaciones || 'N/A',\n  posibles_diagnosticos: triaje.posibles_diagnosticos || 'N/A'\n}}];"
       },
-      "id": "52debb0e-e14c-45d9-a0ec-3fd08943d306",
+      "id": "efb95d23-f549-4f62-9617-d31d089101d3",
       "name": "Parse Body",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1696, 192]
+      "position": [
+        384,
+        -16
+      ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://mock_hce:8001/api/pacientes/{{ $json.numero_documento }}/triaje",
+        "url": "=http://mock_hce:8001/api/pacientes/{{ $json.numero_documento }}/triaje",
         "sendBody": true,
-        "contentType": "json",
-        "body": "={\n  \"id_triaje\": \"{{ $json.id_triaje }}\",\n  \"nivel_urgencia\": \"{{ $json.nivel_urgencia }}\",\n  \"fecha_atencion\": \"{{ $json.fecha_hora }}\",\n  \"sintomas\": \"{{ $json.sintomas }}\",\n  \"signos_vitales\": {{ JSON.stringify($json.signos_vitales) }},\n  \"recomendaciones\": \"{{ $json.recomendaciones }}\",\n  \"posibles_diagnosticos\": \"{{ $json.posibles_diagnosticos }}\"\n}",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"id_triaje\": \"{{ $json.id_triaje }}\",\n  \"nivel_urgencia\": \"{{ $json.nivel_urgencia }}\",\n  \"fecha_atencion\": \"{{ $json.fecha_hora }}\",\n  \"sintomas\": \"{{ $json.sintomas }}\",\n  \"signos_vitales\": {{ JSON.stringify($json.signos_vitales) }},\n  \"recomendaciones\": \"{{ $json.recomendaciones }}\",\n  \"posibles_diagnosticos\": \"{{ $json.posibles_diagnosticos }}\"\n}",
         "options": {
           "timeout": 10000
         }
       },
-      "id": "1a01c4ae-6431-4935-be4e-1e763c5d31cc",
+      "id": "62ccdcfd-8fe9-40b5-9e12-970a332d507f",
       "name": "Enviar a HCE",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1888, 192]
+      "position": [
+        576,
+        -16
+      ]
     },
     {
       "parameters": {
+        "operation": "insert",
         "schema": {
           "__rl": true,
           "mode": "list",
@@ -56,7 +66,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "id_usuario": "00000000-0000-0000-0000-000000000001",
+            "id_usuario": "d4c78837-041b-4a81-b20d-a19eeed9b87b",
             "accion": "SINCRONIZADO_HCE",
             "tabla_afectada": "triajes",
             "id_registro_afectado": "={{ $json.id_triaje }}",
@@ -64,46 +74,151 @@
           },
           "matchingColumns": [],
           "schema": [
-            {"id": "id_usuario", "displayName": "id_usuario", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false},
-            {"id": "accion", "displayName": "accion", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false},
-            {"id": "tabla_afectada", "displayName": "tabla_afectada", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false},
-            {"id": "id_registro_afectado", "displayName": "id_registro_afectado", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false},
-            {"id": "detalles", "displayName": "detalles", "required": false, "defaultMatch": false, "display": true, "type": "object", "canBeUsedToMatch": true, "removed": false}
+            {
+              "id": "id_usuario",
+              "displayName": "id_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "accion",
+              "displayName": "accion",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "tabla_afectada",
+              "displayName": "tabla_afectada",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_registro_afectado",
+              "displayName": "id_registro_afectado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "detalles",
+              "displayName": "detalles",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
           ],
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
         },
         "options": {}
       },
-      "id": "acdb72d4-524e-4052-8610-51852bcff356",
+      "id": "851d4885-9e8b-468c-a181-ac7fe31e3e6b",
       "name": "Log Sincronizacion",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [2096, 192],
+      "position": [
+        784,
+        -16
+      ],
       "credentials": {
-        "postgres": {"id": "nru9cf7voC3B5alh", "name": "Postgres account"}
+        "postgres": {
+          "id": "eWnq0f9S2J237ugv",
+          "name": "Postgres account"
+        }
       }
     },
     {
       "parameters": {
         "jsCode": "return [{json: {\n  success: true,\n  message: 'Triaje sincronizado con HCE correctamente',\n  id_triaje: $input.first().json.id_triaje,\n  fecha_sincronizacion: new Date().toISOString()\n}}];"
       },
-      "id": "93961399-1ddc-48b9-aaef-931d7cbb5e30",
+      "id": "37489a12-4eed-4b20-9b98-37f0d472e4b7",
       "name": "Response Success",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2288, 192]
+      "position": [
+        976,
+        -16
+      ]
     }
   ],
   "connections": {
-    "Webhook Trigger": {"main": [[{"node": "Parse Body", "type": "main", "index": 0}]]},
-    "Parse Body": {"main": [[{"node": "Enviar a HCE", "type": "main", "index": 0}]]},
-    "Enviar a HCE": {"main": [[{"node": "Log Sincronizacion", "type": "main", "index": 0}]]},
-    "Log Sincronizacion": {"main": [[{"node": "Response Success", "type": "main", "index": 0}]]}
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Body": {
+      "main": [
+        [
+          {
+            "node": "Enviar a HCE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar a HCE": {
+      "main": [
+        [
+          {
+            "node": "Log Sincronizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Sincronizacion": {
+      "main": [
+        [
+          {
+            "node": "Response Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    "triage",
+    "hce",
+    "sincronizacion"
+  ],
+  "triggerCount": 0,
+  "versionId": "37c3504e-d4e8-4616-bb4e-fb607f3e1ee1",
   "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "c833c568d2a627d2e79d109052c0697bb56cb3cef7e1915a1bedbf083c518581"
+    "instanceId": "ec26e1b86c0aa884f76d0824e71d7fe04045c25c5d8146eaf903d95ab59533d1"
   }
 }
