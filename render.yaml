@@ -1,0 +1,69 @@
+services:
+  - type: web
+    name: triaje-postgres
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile.postgres
+    autoDeploy: false
+    healthCheckPath: /
+
+  - type: web
+    name: triaje-api
+    env: docker
+    plan: starter
+    dockerfilePath: ./api/Dockerfile
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: POSTGRES_HOST
+        fromService:
+          name: triaje-postgres
+          type: internal
+      - key: POSTGRES_PORT
+        value: "5432"
+      - key: POSTGRES_DB
+        value: "triage_ia"
+      - key: POSTGRES_USER
+        value: "postgres"
+      - key: POSTGRES_PASSWORD
+        value: "postgres123"
+      - key: HCE_API_URL
+        fromService:
+          name: triaje-mock-hce
+          type: internal
+
+  - type: web
+    name: triaje-streamlit
+    env: docker
+    plan: starter
+    dockerfilePath: ./frontend/streamlit/Dockerfile
+    autoDeploy: true
+    envVars:
+      - key: API_URL
+        fromService:
+          name: triaje-api
+          type: internal
+
+  - type: web
+    name: triaje-mock-hce
+    env: docker
+    plan: starter
+    dockerfilePath: ./backend/mock-hce/Dockerfile
+    autoDeploy: true
+    healthCheckPath: /health
+
+  - type: web
+    name: triaje-n8n
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile.n8n
+    autoDeploy: false
+    envVars:
+      - key: N8N_HOST
+        value: "localhost"
+      - key: N8N_PORT
+        value: "5678"
+      - key: N8N_USERNAME
+        value: "admin"
+      - key: N8N_PASSWORD
+        value: "admin123"
