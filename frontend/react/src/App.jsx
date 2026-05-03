@@ -1,16 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardOperativo from './components/DashboardOperativo';
 import DashboardGestion from './components/DashboardGestion';
 import PDFDownload from './components/PDFDownload';
+import { getDashboardOperacional, getDashboardGestion } from './services/api';
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('operacional');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  
+  const [operacionalData, setOperacionalData] = useState(null);
+  const [gestionData, setGestionData] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const opData = await getDashboardOperacional(selectedDate);
+        setOperacionalData(opData);
+      } catch (err) {
+        console.error('Error fetching operacional data:', err);
+      }
+    };
+    fetchData();
+  }, [selectedDate]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const gestData = await getDashboardGestion(selectedMonth);
+        setGestionData(gestData);
+      } catch (err) {
+        console.error('Error fetching gestion data:', err);
+      }
+    };
+    fetchData();
+  }, [selectedMonth]);
 
   const formatDateForFilename = (dateStr) => {
     return dateStr.replace(/-/g, '');
   };
+
+  const currentData = activeTab === 'operacional' ? operacionalData : gestionData;
+  const currentMetricas = currentData?.metricas || {};
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -37,19 +68,18 @@ const App = () => {
             <p className="text-slate-500">Estadísticas y métricas del sistema de triaje</p>
           </div>
           <div className="flex gap-2">
-            {activeTab === 'operacional' ? (
-              <PDFDownload 
-                targetId="dashboard-operacional" 
-                filename={`reporte-operacional-${formatDateForFilename(selectedDate)}`}
-                label="Descargar Reporte PDF"
-              />
-            ) : (
-              <PDFDownload 
-                targetId="dashboard-gestion" 
-                filename={`reporte-gestion-${formatDateForFilename(selectedMonth)}`}
-                label="Descargar Reporte PDF"
-              />
-            )}
+            <PDFDownload 
+              type={activeTab}
+              data={currentData}
+              selectedDate={selectedDate}
+              selectedMonth={selectedMonth}
+              metricas={currentMetricas}
+              filename={activeTab === 'operacional' 
+                ? `reporte-operacional-${formatDateForFilename(selectedDate)}` 
+                : `reporte-gestion-${formatDateForFilename(selectedMonth)}`
+              }
+              label="Descargar Reporte PDF"
+            />
           </div>
         </div>
 
