@@ -19,34 +19,41 @@ Sistema completo para triaje clínico con apoyo de inteligencia artificial, inte
 
 ```mermaid
 graph TB
-    subgraph Frontend
-        ST[Streamlit App<br/>Puerto 8501]
-        RT[React Dashboard<br/>Puerto 3000]
+    subgraph Docker_Engine["🐳 Docker Engine (Orquestación)"]
+        direction TB
+        subgraph Frontend["📱 Frontend"]
+            ST["Streamlit App<br/>:8501"]
+            RT["React Dashboard<br/>:3000"]
+        end
+
+        subgraph Backend["⚙️ Backend"]
+            API["Flask API<br/>:5000"]
+            N8N["n8n Workflows<br/>:5678"]
+            HCE["Mock HCE API<br/>:8001"]
+        end
+
+        subgraph Data["💾 Datos"]
+            PG[("PostgreSQL<br/>:5432")]
+        end
+
+        subgraph External["☁️ Externos"]
+            OA["OpenAI API"]
+        end
+
+        ST -.->|HTTP REST| API
+        RT -.->|HTTP REST| API
+        API <-->|SQL| PG
+        API -.->|Webhook| N8N
+        N8N -.->|SQL| PG
+        N8N -.->|HTTP| HCE
+        API -.->|HTTP| OA
+        HCE -.->|HTTP| OA
     end
 
-    subgraph Backend
-        API[Flask API<br/>Puerto 5000]
-        N8N[n8n Workflows<br/>Puerto 5678]
-        HCE[Mock HCE API<br/>Puerto 8001]
-    end
-
-    subgraph Data
-        PG[(PostgreSQL<br/>Puerto 5432)]
-    end
-
-    subgraph External
-        OA[OpenAI API]
-    end
-
-    ST -->|HTTP REST| API
-    RT -->|HTTP REST| API
-    API <-->|SQL| PG
-    API -->|Webhook| N8N
-    N8N -->|SQL| PG
-    N8N -->|HTTP| HCE
-    API -->|HTTP| OA
-    HCE -->|HTTP| OA
-
+    style Docker_Engine fill:#2496ed,color:#fff,stroke:#1a73e8,stroke-width:3px
+    style Frontend fill:#1a1a2e,color:#fff
+    style Backend fill:#16213e,color:#fff
+    style Data fill:#0f3460,color:#fff
     style PG fill:#336791,color:#fff
     style API fill:#000,color:#fff
     style N8N fill:#ea4a5a,color:#fff
@@ -55,6 +62,58 @@ graph TB
     style HCE fill:#4caf50,color:#fff
     style OA fill:#808080,color:#fff
 ```
+
+### Flujo de Ejecución con Docker
+
+```mermaid
+graph LR
+    A["> docker-compose up -d"] --> B["Todos los servicios\ninician automáticamente"]
+    B --> C["PostgreSQL primero"]
+    B --> D["Mock HCE después"]
+    B --> E["API Flask luego"]
+    B --> F["Streamlit y React\nal final"]
+    
+    style A fill:#2496ed,color:#fff
+    style B fill:#16213e,color:#fff
+    style C fill:#336791,color:#fff
+    style D fill:#4caf50,color:#fff
+    style E fill:#000,color:#fff
+    style F fill:#ff4b4b,color:#fff
+```
+
+### Servicios Docker (docker-compose.yml)
+
+| Contenedor | Imagen | Puertos | Descripción |
+|------------|--------|---------|-------------|
+| `triage_postgres` | postgres:15-alpine | 5432 | Base de datos |
+| `triage_n8n` | n8nio/n8n:latest | 5678 | Automatización workflows |
+| `triage_mock_hce` | Build local | 8001 | API HCE simulada |
+| `triage_api` | Build local | 5000 | API Flask del sistema |
+| `triage_streamlit` | Build local | 8501 | Interfaz Streamlit |
+
+> **Nota:** El Dashboard React (`triage_react`) no está en docker-compose. Se ejecuta manualmente con `npm run dev` en `frontend/react`.
+
+### Inicio Rápido
+
+```bash
+# 1. Clonar el proyecto
+git clone https://github.com/HrSly11/triaje-ia.git
+cd triaje-ia
+
+# 2. Iniciar todos los servicios con Docker
+docker-compose up -d
+
+# 3. Verificar estado
+docker-compose ps
+
+# 4. Ver logs de un servicio específico
+docker-compose logs -f api
+
+# 5. Detener todos los servicios
+docker-compose down
+```
+
+**Nota:** Ya no se ejecuta `python app.py` o `npm run dev` directamente. Todo funciona dentro de contenedores Docker.
 
 ### Flujo de Datos
 
@@ -181,10 +240,20 @@ erDiagram
 |-----------|-----------|---------|
 | Docker | Motor de contenedores | 20.10+ |
 | Docker Compose | Orquestación | v2.0+ |
-| Python | Backend API, Streamlit | 3.10+ |
-| Node.js | React Dashboard | 18.0+ |
-| PostgreSQL | Base de datos | 15+ |
-| n8n | Automatización | Latest |
+
+> **Nota:** Ya no es necesario instalar Python, Node.js o PostgreSQL directamente. Todo funciona dentro de contenedores Docker.
+
+### Servicios que se ejecutan automáticamente (Docker)
+
+| Servicio | Contenedor | Puerto |
+|----------|------------|--------|
+| PostgreSQL | `triage_postgres` | 5432 |
+| API Flask | `triage_api` | 5000 |
+| Streamlit | `triage_streamlit` | 8501 |
+| n8n | `triage_n8n` | 5678 |
+| Mock HCE | `triage_mock_hce` | 8001 |
+
+> **React Dashboard:** Se ejecuta manualmente con `npm run dev` en `frontend/react`
 
 ---
 
@@ -284,20 +353,19 @@ docker exec -it triage_postgres psql -U postgres -d triage_ia -f /docker-entrypo
    - `workflow_sincronizacion_hce.json`
    - `workflow_reporte_diario.json`
 
-### 7. Ejecutar Streamlit (desarrollo)
+### Desarrollo Local (Opcional)
+
+Si deseas desarrollar sin Docker:
 
 ```bash
+# Backend Python
+cd api
+python -m venv .venv
+source .venv/Scripts/Activate
 pip install -r requirements.txt
-pip install streamlit plotly pandas
+python app.py
 
-# Crear archivo .env con OPENAI_API_KEY si deseas IA real
-
-streamlit run frontend/streamlit/app.py --dev
-```
-
-### 8. Ejecutar React Dashboard (desarrollo)
-
-```bash
+# Frontend React
 cd frontend/react
 npm install
 npm run dev
