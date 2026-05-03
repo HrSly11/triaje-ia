@@ -16,17 +16,17 @@ services:
     healthCheckPath: /health
     envVars:
       - key: POSTGRES_HOST
-        value: "triaje-postgres"
+        value: triaje-postgres
       - key: POSTGRES_PORT
         value: "5432"
       - key: POSTGRES_DB
-        value: "triage_ia"
+        value: triage_ia
       - key: POSTGRES_USER
-        value: "postgres"
+        value: postgres
       - key: POSTGRES_PASSWORD
-        value: "postgres123"
+        value: postgres123
       - key: HCE_API_URL
-        value: "http://triaje-mock-hce:8001"
+        value: http://triaje-mock-hce:8001
 
   - type: web
     name: triaje-streamlit
@@ -36,7 +36,7 @@ services:
     autoDeploy: true
     envVars:
       - key: API_URL
-        value: "http://triaje-api:5000"
+        value: http://triaje-api:5000
 
   - type: web
     name: triaje-mock-hce
@@ -54,10 +54,10 @@ services:
     autoDeploy: false
     envVars:
       - key: N8N_HOST
-        value: "triaje-n8n"
+        value: triaje-n8n
       - key: N8N_PORT
         value: "5678"
       - key: N8N_USERNAME
-        value: "admin"
+        value: admin
       - key: N8N_PASSWORD
-        value: "admin123"
+        value: admin123
